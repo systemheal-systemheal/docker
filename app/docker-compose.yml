@@ -1,0 +1,69 @@
+services:
+
+  db:
+    container_name: database
+    image: database:1
+    build: ./database
+    networks:
+      - test_net
+    volumes:
+      - type: volume
+        source: test
+        target: /var/lib/postgresql/data
+    env_file:
+      - .env-database
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready", "-U", "docker_app"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  python:
+    container_name: backend
+    image: backend:1
+    build: ./backend
+    networks:
+      - test_net
+    env_file:
+      - .env-backend
+    ports:
+      - "5432"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/test"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: always
+
+  nginx:
+    container_name: frontend
+    image: frontend:1
+    build: ./frontend
+    networks:
+      - test_net
+    ports:
+      - "80:80"
+    configs:
+      - source: nginx
+        target: /etc/nginx/nginx.conf
+        mode: 444
+    depends_on:
+      db:
+        condition: service_healthy
+      python:
+        condition: service_healthy
+    restart: always
+
+networks:
+  test_net:
+
+volumes:
+  test:
+
+configs:
+  nginx:
+    file: ./nginx/nginx.conf
