@@ -21,8 +21,8 @@ docker network create test_net
 
 docker run --rm -d \
   --name database \
-  --net=todo_net \
-  -v todo_db:/var/lib/postgresql/data \
+  --net=test_net \
+  -v test:/var/lib/postgresql/data \
   -e POSTGRES_DB=docker_app_db \
   -e POSTGRES_USER=docker_app \
   -e POSTGRES_PASSWORD=docker_app \
@@ -32,7 +32,7 @@ docker run --rm -d \
 
 docker run --rm -d \
   --name backend \
-  --net=todo_net \
+  --net=test_net \
   -e HOST=database \
   -e PORT=5432 \
   -e DB=docker_app_db \
@@ -44,7 +44,7 @@ docker run --rm -d \
 
 docker run --rm -d \
   --name frontend \
-  --net=todo_net \
+  --net=test_net \
   -p 80:80 \
   -v $(pwd)/nginx/nginx.conf:/etc/nginx/nginx.conf:ro \
   7_nginx
