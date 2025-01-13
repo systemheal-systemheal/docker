@@ -49,4 +49,9 @@ docker run --rm -d \
   -v $(pwd)/nginx/nginx.conf:/etc/nginx/nginx.conf:ro \
   frontend
 
+## Либо заходим в директорию апп и набираем следующую команду для запуска всех сервисов по очереди при помощи docker compose
+
+docker compose up -d --build
+
 ## Заходим на сайт http://localhost
+
