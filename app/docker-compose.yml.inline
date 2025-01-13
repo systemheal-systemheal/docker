@@ -1,0 +1,79 @@
+services:
+
+  backend:
+    image: backend:1
+    container_name: backend
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.8
+        COPY ./backend/requirements.txt ./requirements.txt
+        RUN python -m pip install --upgrade pip && pip install -r requirements.txt
+        WORKDIR /app
+        EXPOSE 8000
+        COPY ./backend .
+        ENTRYPOINT ["gunicorn", "--bind", "0.0.0.0:8000", "wsgi:app"]
+
+    networks:
+      - test_net
+    ports:
+      - "8000"
+    env_file:
+      - .env-backend
+
+  nginx:
+    image: frontend:1
+    container_name: frontend
+    build:
+      context: .
+      dockerfile_inline: |
+        ### Multi-stage
+        ### Stage 1.Установка зависимостей и компиляция конченого файла
+        FROM node:17 AS BUILD
+        WORKDIR /app
+        COPY ./frontend/todo-list/package.json ./package.json
+        RUN npm i
+        COPY ./frontend/todo-list .
+        RUN npm run build
+        ### Stage 2. Копирование артефактов в nginx
+        FROM nginx
+        COPY --from=BUILD /app/dist/index.html /nginx/static/index.html
+        COPY --from=BUILD /app/dist/static/css /nginx/static/
+        COPY --from=BUILD /app/dist/static/js /nginx/static/
+
+    configs:
+      - source: nginx
+        target: /etc/nginx/nginx.conf
+    networks:
+      - test_net
+    ports:
+      -  "80:80"
+
+  db:
+    image: database:1
+    container_name: database
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM postgres:14
+        COPY ./database/init_db.sh /docker-entrypoint-initdb.d/init_db.sh
+
+    networks:
+      - test_net
+    volumes:
+      - type: volume
+        source: test
+        target: /var/lib/postgresql/data
+
+    env_file:
+      - .env-database
+
+networks:
+  test_net:
+
+volumes:
+  test:
+
+configs:
+  nginx:
+    file: ./nginx/nginx.conf
